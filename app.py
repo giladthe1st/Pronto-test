@@ -69,9 +69,6 @@ def main():
     if 'expanded_menus' not in st.session_state:
         st.session_state.expanded_menus = {}
     
-    # Data source selection - now in main area
-    data_source = "CSV File"  # Default to CSV file since sidebar is hidden
-    
     # Load data
     restaurants = []
     csv_file = "sample_restaurants.csv"
@@ -122,68 +119,51 @@ def main():
                 # Display the uploaded flyer
                 st.image(uploaded_flyer, caption=f"Flyer for {selected_restaurant}", width=300)
     
-    # Collapsible filter section
-    with st.expander("📊 Click to Show Filters and Sorting Options", expanded=False):
-        st.markdown("<div class='filter-container'>", unsafe_allow_html=True)
+    # Create 5 columns for filters in one line
+    if restaurants:
+        filter_col1, filter_col2, filter_col3, filter_col4, filter_col5 = st.columns(5)
         
-        # Create 3 columns for filters
-        filter_col1, filter_col2, filter_col3 = st.columns(3)
-        
-        # Distance and Rating filters in first column
+        # Distance filter
         with filter_col1:
-            if restaurants:
-                max_distance = max([float(r['distance'].split()[0]) for r in restaurants])
-                distance_filter = st.slider(
-                    "Maximum Distance (miles)",
-                    0.0, max_distance, max_distance, 0.1
-                )
-                
-                min_rating = st.slider(
-                    "Minimum Rating",
-                    0.0, 5.0, 0.0, 0.1
-                )
+            max_distance = max([float(r['distance'].split()[0]) for r in restaurants])
+            distance_filter = st.slider(
+                "Max Distance (mi)",
+                0.0, max_distance, max_distance, 0.1
+            )
         
-        # Review count and sort options in second column
+        # Rating filter
         with filter_col2:
-            if restaurants:
-                min_reviews = st.slider(
-                    "Minimum Number of Reviews",
-                    0, max([r['review_count'] for r in restaurants]) if restaurants else 100, 0
-                )
-                
-                sort_by = st.selectbox(
-                    "Sort By",
-                    ["Distance", "Rating", "Review Count"]
-                )
+            min_rating = st.slider(
+                "Min Rating",
+                0.0, 5.0, 0.0, 0.1
+            )
         
-        # Sort order in third column
+        # Review count filter
         with filter_col3:
-            if restaurants:
-                sort_order = st.radio(
-                    "Sort Order",
-                    ["Descending", "Ascending"]
-                )
-                
-                # Add some empty space for visual balance
-                st.write("")
-                st.write("")
+            min_reviews = st.slider(
+                "Min Reviews",
+                0, max([r['review_count'] for r in restaurants]) if restaurants else 100, 0
+            )
         
-        st.markdown("</div>", unsafe_allow_html=True)
+        # Sort by option
+        with filter_col4:
+            sort_by = st.selectbox(
+                "Sort By",
+                ["Distance", "Rating", "Review Count"]
+            )
+        
+        # Sort order option
+        with filter_col5:
+            sort_order = st.radio(
+                "Sort Order",
+                ["Descending", "Ascending"],
+                horizontal=True
+            )
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     
     # Filter and sort the restaurants
     if restaurants:
-        # Initialize default values if expander is not expanded
-        if 'distance_filter' not in locals():
-            distance_filter = max([float(r['distance'].split()[0]) for r in restaurants])
-        if 'min_rating' not in locals():
-            min_rating = 0.0
-        if 'min_reviews' not in locals():
-            min_reviews = 0
-        if 'sort_by' not in locals():
-            sort_by = "Distance"
-        if 'sort_order' not in locals():
-            sort_order = "Descending"
-            
         # Apply distance filter
         restaurants = [r for r in restaurants if float(r['distance'].split()[0]) <= distance_filter]
         
@@ -198,13 +178,13 @@ def main():
         elif sort_by == "Review Count":
             restaurants.sort(key=lambda r: r['review_count'], reverse=(sort_order == "Descending"))
     
+    # Show how many restaurants match the filters
+    st.subheader(f"Found {len(restaurants)} restaurants")
+    
     # Display restaurants
     if not restaurants:
         st.info("No restaurants found. Please check your data source or adjust your filters.")
     else:
-        # Show how many restaurants match the filters
-        st.subheader(f"Found {len(restaurants)} restaurants")
-        
         for restaurant in restaurants:
             # Create a row for each restaurant
             with st.container():

@@ -75,3 +75,33 @@
     color: #0056b3;
     text-decoration: underline;
 }
+.filter-container {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Make sliders more compact */
+.filter-container .stSlider {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Make radio buttons more compact */
+.filter-container .stRadio {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Make selectbox more compact */
+.filter-container .stSelectbox {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* Reduce padding for all elements in filter container */
+.filter-container [data-testid="stVerticalBlock"] {
+    gap: 0 !important;
+}
