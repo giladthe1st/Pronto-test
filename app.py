@@ -6,6 +6,9 @@ import os
 import re
 from data_handler import DataHandler
 
+# Set page configuration to wide mode
+st.set_page_config(layout="wide")
+
 def load_image_from_url(url_or_path):
     """Load an image from a URL or local file path."""
     try:
