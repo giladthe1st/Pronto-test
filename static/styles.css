@@ -1,0 +1,77 @@
+.restaurant-row {
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    padding: 5px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.restaurant-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+    margin: 0 auto;
+}
+.restaurant-name {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+.restaurant-deals {
+    color: #e63946;
+    font-weight: bold;
+    cursor: pointer;
+}
+.restaurant-info {
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
+.restaurant-reviews {
+    color: #0056b3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.stars {
+    color: #FFD700;
+    font-size: 1.2rem;
+}
+.rating-text {
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+.section-header {
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 5px;
+}
+.restaurant-location {
+    margin-bottom: 5px;
+}
+.restaurant-distance {
+    margin-bottom: 5px;
+}
+.expandable {
+    cursor: pointer;
+    color: #e63946;
+    font-weight: bold;
+}
+.expanded-content {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    border-left: 3px solid #e63946;
+}
+.flyer-image {
+    max-width: 100%;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+.menu-expandable {
+    cursor: pointer;
+    color: #0056b3;
+    text-decoration: underline;
+}
