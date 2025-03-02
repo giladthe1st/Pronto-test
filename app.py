@@ -6,23 +6,6 @@ import os
 import re
 from data_handler import DataHandler
 
-# Page configuration
-st.set_page_config(
-    page_title="Restaurant Finder",
-    page_icon="🍽️",
-    layout="wide",
-    initial_sidebar_state="collapsed"  # Hide sidebar by default
-)
-
-# Custom CSS for better styling
-def load_css(css_file):
-    with open(css_file, 'r') as f:
-        css = f.read()
-    return st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
-
-# Load external CSS
-load_css('static/styles.css')
-
 def load_image_from_url(url_or_path):
     """Load an image from a URL or local file path."""
     try:
