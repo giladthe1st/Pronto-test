@@ -35,11 +35,35 @@ def get_google_credentials(credentials_path=None):
         elif hasattr(st, 'secrets'):
             print("Checking Streamlit secrets...")
             
-            # Debug: Print available secret keys
-            if hasattr(st.secrets, '_secrets'):
-                print(f"Available secret sections: {list(st.secrets._secrets.keys())}")
+            # Check if all required credential keys are directly in st.secrets
+            required_keys = ['type', 'project_id', 'private_key_id', 'private_key', 'client_email', 
+                            'client_id', 'auth_uri', 'token_uri', 'auth_provider_x509_cert_url', 
+                            'client_x509_cert_url', 'universe_domain']
             
-            if 'gcp_service_account' in st.secrets:
+            # Check if all required keys are present directly in st.secrets
+            if all(hasattr(st.secrets, key) for key in required_keys):
+                print("Found all required credential keys directly in Streamlit secrets")
+                
+                # Create a credentials dictionary from individual secret keys
+                credentials_dict = {
+                    'type': st.secrets.type,
+                    'project_id': st.secrets.project_id,
+                    'private_key_id': st.secrets.private_key_id,
+                    'private_key': st.secrets.private_key,
+                    'client_email': st.secrets.client_email,
+                    'client_id': st.secrets.client_id,
+                    'auth_uri': st.secrets.auth_uri,
+                    'token_uri': st.secrets.token_uri,
+                    'auth_provider_x509_cert_url': st.secrets.auth_provider_x509_cert_url,
+                    'client_x509_cert_url': st.secrets.client_x509_cert_url,
+                    'universe_domain': st.secrets.universe_domain
+                }
+                
+                print("Created credentials dictionary from individual secret keys")
+                return ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+            
+            # Check for gcp_service_account section as a fallback
+            elif 'gcp_service_account' in st.secrets:
                 print("Found gcp_service_account in Streamlit secrets")
                 
                 # Get credentials from Streamlit secrets
@@ -61,7 +85,7 @@ def get_google_credentials(credentials_path=None):
                     st.error(f"Missing required keys in Google credentials: {', '.join(missing_keys)}")
                     return None
             else:
-                print("No gcp_service_account found in Streamlit secrets")
+                print("No credential keys or gcp_service_account found in Streamlit secrets")
         
         # If no file path or file doesn't exist, try environment variables
         elif 'GOOGLE_CREDENTIALS' in os.environ:
