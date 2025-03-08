@@ -117,7 +117,7 @@ def _render_detailed_deals(restaurant, filtered_deals, has_flyer, flyer_path):
     # Display flyer if available (below all deals)
     if has_flyer and any(st.session_state.get(f"deal_{restaurant['name'].lower().replace(' ', '_')}_{i}", False) 
                          for i, _, _ in filtered_deals):
-        st.image(flyer_path, caption="Promotional Flyer", use_container_width =True)
+        st.image(flyer_path, caption="Promotional Flyer", use_container_width=True)
 
 def _display_legacy_deals(restaurant, has_flyer, flyer_path, text_filter=""):
     """Display deals using the legacy deals structure."""
@@ -181,7 +181,7 @@ def _render_legacy_deals(restaurant, filtered_deals, has_flyer, flyer_path):
     # Display flyer if available (below all deals)
     if has_flyer and any(st.session_state.get(f"deal_{restaurant['name'].lower().replace(' ', '_')}_{i}", False) 
                          for i, _ in filtered_deals):
-        st.image(flyer_path, caption="Promotional Flyer", use_column_width=True)
+        st.image(flyer_path, caption="Promotional Flyer", use_container_width=True)
 
 def _display_single_legacy_deal(restaurant, deals_text, has_flyer, flyer_path, text_filter=""):
     """Display a single legacy deal."""
@@ -215,7 +215,7 @@ def _display_single_legacy_deal(restaurant, deals_text, has_flyer, flyer_path, t
             
             # Display flyer if available
             if has_flyer:
-                st.image(flyer_path, caption="Promotional Flyer", use_column_width=True)
+                st.image(flyer_path, caption="Promotional Flyer", use_container_width=True)
     else:
         # No deals match the filter
         _show_no_deals_message(text_filter)

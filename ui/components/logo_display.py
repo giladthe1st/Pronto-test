@@ -29,7 +29,7 @@ def display_restaurant_logo(restaurant_name, logo_url=None):
         img = Image.open(logo_path)
         # Maintain aspect ratio but ensure consistent size
         img.thumbnail((140, 140), Image.LANCZOS)
-        st.image(img, use_column_width=False, width=140)
+        st.image(img, use_container_width=False, width=140)
     else:
         # Attempt to download logo if we have a URL
         if logo_url:
@@ -38,7 +38,7 @@ def display_restaurant_logo(restaurant_name, logo_url=None):
                 img = Image.open(downloaded_path)
                 # Maintain aspect ratio but ensure consistent size
                 img.thumbnail((140, 140), Image.LANCZOS)
-                st.image(img, use_column_width=False, width=140)
+                st.image(img, use_container_width=False, width=140)
             else:
                 st.markdown('<span style="font-size: 80px; color: #666;">🍽️</span>', unsafe_allow_html=True)
         else:
