@@ -34,3 +34,6 @@ env/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Credentials
+credentials.json
