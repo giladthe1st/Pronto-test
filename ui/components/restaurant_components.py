@@ -1,8 +1,64 @@
 """
-Deal display functionality for restaurant UI.
+Components for displaying restaurant information in the Pronto application.
 """
 import os
 import streamlit as st
+from PIL import Image
+from utils.restaurant_utils import calculate_distance
+from utils.image_utils import download_google_drive_image
+
+def apply_restaurant_styling():
+    """Apply common CSS styling for restaurant display."""
+    st.markdown("""
+    <style>
+    .restaurant-name {
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+    .section-header {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .vertical-spacer {
+        height: 35px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+def display_restaurant_logo(restaurant_name, logo_url=None):
+    """
+    Display a restaurant logo or placeholder.
+    
+    Args:
+        restaurant_name: Name of the restaurant
+        logo_url: Optional URL to download logo from if not found locally
+    """
+    # Add fixed vertical space before logo
+    st.markdown('<div class="vertical-spacer"></div>', unsafe_allow_html=True)
+    
+    # Create a safe filename from the restaurant name
+    safe_name = restaurant_name.lower().replace(' ', '_').replace('&', '_').replace("'", "")
+    logo_path = f"logo_images/{safe_name}_logo.png"
+    
+    if os.path.exists(logo_path):
+        # Load and resize the logo image
+        img = Image.open(logo_path)
+        # Maintain aspect ratio but ensure consistent size
+        img.thumbnail((140, 140), Image.LANCZOS)
+        st.image(img, use_container_width =False, width=140)
+    else:
+        # Attempt to download logo if we have a URL
+        if logo_url:
+            downloaded_path = download_google_drive_image(logo_url, restaurant_name)
+            if downloaded_path:
+                img = Image.open(downloaded_path)
+                # Maintain aspect ratio but ensure consistent size
+                img.thumbnail((140, 140), Image.LANCZOS)
+                st.image(img, use_container_width =False, width=140)
+            else:
+                st.markdown('<span style="font-size: 80px; color: #666;">🍽️</span>', unsafe_allow_html=True)
+        else:
+            st.markdown('<span style="font-size: 80px; color: #666;">🍽️</span>', unsafe_allow_html=True)
 
 def check_flyer_existence(restaurant_name):
     """
@@ -181,7 +237,7 @@ def _render_legacy_deals(restaurant, filtered_deals, has_flyer, flyer_path):
     # Display flyer if available (below all deals)
     if has_flyer and any(st.session_state.get(f"deal_{restaurant['name'].lower().replace(' ', '_')}_{i}", False) 
                          for i, _ in filtered_deals):
-        st.image(flyer_path, caption="Promotional Flyer", use_column_width=True)
+        st.image(flyer_path, caption="Promotional Flyer", use_container_width =True)
 
 def _display_single_legacy_deal(restaurant, deals_text, has_flyer, flyer_path, text_filter=""):
     """Display a single legacy deal."""
@@ -215,7 +271,7 @@ def _display_single_legacy_deal(restaurant, deals_text, has_flyer, flyer_path, t
             
             # Display flyer if available
             if has_flyer:
-                st.image(flyer_path, caption="Promotional Flyer", use_column_width=True)
+                st.image(flyer_path, caption="Promotional Flyer", use_container_width =True)
     else:
         # No deals match the filter
         _show_no_deals_message(text_filter)
@@ -226,3 +282,131 @@ def _show_no_deals_message(text_filter=""):
         st.markdown(f"<em>No deals matching '{text_filter}'</em>", unsafe_allow_html=True)
     else:
         st.markdown("<em>No deals available</em>", unsafe_allow_html=True)
+
+def display_menu_section(restaurant):
+    """
+    Display the menu section for a restaurant.
+    
+    Args:
+        restaurant: Dictionary containing restaurant information
+    """
+    st.markdown("<div class='section-header'>Menu</div>", unsafe_allow_html=True)
+    
+    # Create a unique key for this restaurant's menu expander
+    menu_key = f"menu_{restaurant['name'].lower().replace(' ', '_')}"
+    
+    # Initialize this menu in session state if not already present
+    if menu_key not in st.session_state:
+        st.session_state[menu_key] = False
+    
+    # Create a toggle function for this menu with proper closure
+    def toggle_menu(key=menu_key):
+        st.session_state[key] = not st.session_state[key]
+    
+    # Create an expandable menu section with toggle button
+    button_text = "View Menu"
+    if st.session_state[menu_key]:
+        button_text = "Hide Menu"
+    
+    # Use a more efficient button implementation with a different key for the button
+    st.button(
+        button_text, 
+        key=f"btn_{menu_key}", 
+        help="Click to expand/collapse", 
+        on_click=toggle_menu,
+        use_container_width=True
+    )
+    
+    # Show expanded content if this menu is expanded
+    if st.session_state[menu_key]:
+        st.markdown("<div class='expanded-content'>", unsafe_allow_html=True)
+        st.markdown("<strong>Menu Information:</strong>", unsafe_allow_html=True)
+        st.markdown(f"<a href='{restaurant['menu_url']}' target='_blank'>Open Full Menu in New Tab</a>", unsafe_allow_html=True)
+        
+        # Use lazy loading for iframe to improve performance
+        # Only load iframe when menu is expanded
+        if 'menu_url' in restaurant and restaurant['menu_url']:
+            st.components.v1.iframe(
+                restaurant['menu_url'], 
+                height=300, 
+                scrolling=True
+            )
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+
+def display_reviews_section(restaurant):
+    """
+    Display the reviews section for a restaurant.
+    
+    Args:
+        restaurant: Dictionary containing restaurant information
+    """
+    st.markdown("<div class='section-header'>Reviews</div>", unsafe_allow_html=True)
+    
+    # Check if we have the new reviews_data format
+    if 'reviews_data' in restaurant and restaurant['reviews_data']:
+        # Display reviews_data content directly with line breaks
+        reviews_data = restaurant['reviews_data'].replace('\n', '<br>')
+        st.markdown(f"<div class='restaurant-reviews'>{reviews_data}</div>", unsafe_allow_html=True)
+    
+    # Fall back to old format if reviews_data is not available
+    elif 'reviews' in restaurant and restaurant['reviews']:
+        st.markdown(f"<div class='restaurant-reviews'>{restaurant['reviews']}</div>", unsafe_allow_html=True)
+    
+    else:
+        st.info("No reviews available for this restaurant.")
+
+def display_location_section(restaurant, user_location=None):
+    """
+    Display the location section for a restaurant.
+    
+    Args:
+        restaurant: Dictionary containing restaurant information
+        user_location: Dictionary containing user's latitude and longitude
+    """
+    st.markdown("<div class='section-header'>Location</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='restaurant-location'><strong>Address:</strong> {restaurant['location']}</div>", unsafe_allow_html=True)
+    
+    # Calculate and display distance if we have both user location and restaurant coordinates
+    has_user_location = user_location and user_location['latitude'] is not None and user_location['longitude'] is not None
+    has_restaurant_coords = 'latitude' in restaurant and 'longitude' in restaurant
+    
+    if has_user_location and has_restaurant_coords:
+        display_calculated_distance(restaurant, user_location)
+    else:
+        # Display default distance if we don't have coordinates
+        st.markdown(f"<div class='restaurant-distance'><strong>Distance:</strong> {restaurant.get('distance', 'Unknown')}</div>", unsafe_allow_html=True)
+    
+    # Display Google Maps link
+    st.markdown(f"<div class='restaurant-info'><a href='{restaurant['maps_url']}' target='_blank'>📍 Get Directions</a></div>", unsafe_allow_html=True)
+
+def display_calculated_distance(restaurant, user_location):
+    """
+    Calculate and display the distance between user and restaurant.
+    
+    Args:
+        restaurant: Dictionary containing restaurant information
+        user_location: Dictionary containing user's latitude and longitude
+    """
+    # Calculate distance using the Haversine formula
+    distance_km = calculate_distance(
+        user_location['latitude'], 
+        user_location['longitude'],
+        restaurant['latitude'], 
+        restaurant['longitude']
+    )
+    
+    # Convert to miles
+    distance_mi = distance_km * 0.621371
+    
+    # Format distance for display
+    if distance_mi < 0.1:
+        distance_text = "less than 0.1 mi"
+        # Store the actual value for filtering
+        restaurant['distance'] = "0.1 mi"
+    else:
+        distance_text = f"{distance_mi:.1f} mi"
+        # Store the actual value for filtering
+        restaurant['distance'] = f"{distance_mi:.1f} mi"
+    
+    st.markdown(f"<div class='restaurant-distance'><strong>Distance:</strong> {distance_text}</div>", unsafe_allow_html=True)
