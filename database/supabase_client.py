@@ -440,7 +440,7 @@ def process_restaurant_data_from_db(restaurants):
         
         # Check if we have any reviews
         if review_count > 0:
-            processed['reviews_data'] = f"Rating: {rating}/5 based on {review_count} reviews."
+            processed['reviews_data'] = f"Rating: {rating}/10"
             processed['reviews'] = processed['reviews_data']
             print(f"Created reviews data: {processed['reviews_data']}")
         else:

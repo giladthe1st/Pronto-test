@@ -34,7 +34,7 @@ def display_reviews_section(restaurant):
         # Display rating with stars and numeric value
         review_count = restaurant.get('review_count', 0)
         st.markdown(
-            f"<div class='rating-stars'>{stars_html} {rating:.1f}/5 ({review_count} reviews)</div>",
+            f"<div class='rating-stars'>{stars_html} ({review_count} reviews)</div>",
             unsafe_allow_html=True
         )
     
