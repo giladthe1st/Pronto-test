@@ -36,10 +36,11 @@ except ImportError:
 
 # Constants for image handling
 CACHE_DIR = "logo_cache"
+STATIC_LOGOS_DIR = "static/logos"
 
 def ensure_directories_exist():
     """Ensure all required directories exist"""
-    directories = ["data", "flyers", "cached_images", "logo_images", CACHE_DIR]
+    directories = ["data", "flyers", "cached_images", "logo_images", CACHE_DIR, STATIC_LOGOS_DIR]
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -124,6 +125,22 @@ def get_cache_path(url, restaurant_name):
     safe_name = create_safe_filename(restaurant_name)
     return os.path.join(CACHE_DIR, f"{safe_name}_{url_hash}.png")
 
+def get_static_path(url, restaurant_name):
+    """
+    Generate a path for an image in the static directory based on URL and restaurant name.
+    
+    Args:
+        url (str): Image URL
+        restaurant_name (str): Name of the restaurant
+        
+    Returns:
+        str: Path to the static image
+    """
+    # Create a unique hash based on the URL
+    url_hash = hashlib.md5(url.encode()).hexdigest()[:10]
+    safe_name = create_safe_filename(restaurant_name)
+    return os.path.join(STATIC_LOGOS_DIR, f"{safe_name}_{url_hash}")
+
 def create_placeholder_image(size=DEFAULT_LOGO_SIZE, text=None):
     """
     Create a placeholder image for missing logos.
@@ -201,10 +218,25 @@ def get_logo_from_drive(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refr
         print(f"Invalid URL for {restaurant_name}: {url}")
         return create_placeholder_image(size)
     
-    # Generate cache path
+    # Generate paths
     cache_path = get_cache_path(url, restaurant_name)
+    static_path = get_static_path(url, restaurant_name)
     
-    # Check if cached version exists and we're not forcing a refresh
+    # First check if image exists in static directory (for deployed environment)
+    if os.path.exists(static_path) and not force_refresh:
+        try:
+            # Load from static directory
+            img = Image.open(static_path)
+            # Resize if needed
+            if img.size != size:
+                img.thumbnail(size, Image.LANCZOS)
+            print(f"Using static image for {restaurant_name} from {static_path}")
+            return img
+        except Exception as e:
+            print(f"Error loading static image for {restaurant_name}: {e}")
+            # If there's an error loading the static image, we'll try the cache or download
+    
+    # Then check if cached version exists and we're not forcing a refresh
     if os.path.exists(cache_path) and not force_refresh:
         try:
             # Load from cache
@@ -234,6 +266,16 @@ def get_logo_from_drive(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refr
     img = download_with_credentials(file_id, cache_path, size)
     
     if img:
+        # Also save to static directory for deployment
+        try:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(static_path), exist_ok=True)
+            # Save the image
+            img.save(static_path, format="PNG")
+            print(f"Saved image to static directory: {static_path}")
+        except Exception as e:
+            print(f"Error saving image to static directory: {e}")
+        
         return img
     
     # If all methods fail, return a placeholder image
@@ -277,27 +319,23 @@ def display_logo(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refresh=Fal
         # Get the logo image
         img = get_logo_from_drive(url, restaurant_name, size, force_refresh)
         
-        # Get the cache path
+        # Try to get the image from the static directory first (for deployed environments)
+        static_path = get_static_path(url, restaurant_name)
+        if os.path.exists(static_path):
+            img_base64 = get_image_base64(static_path)
+            if img_base64:
+                html = f'<img src="data:image/png;base64,{img_base64}" width="{size[0]}" height="{size[1]}" style="object-fit: contain;">'
+                return html
+        
+        # Then try the cache path
         cache_path = get_cache_path(url, restaurant_name)
-        
-        # If the image is not already saved (e.g., it's a placeholder), save it
-        if not os.path.exists(cache_path) and img:
-            try:
-                # Ensure the directory exists
-                os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-                # Save the image
-                img.save(cache_path, format="PNG")
-            except Exception as e:
-                print(f"Error saving image to cache: {e}")
-        
-        # Convert to base64 using the file path
         if os.path.exists(cache_path):
             img_base64 = get_image_base64(cache_path)
-            # Create HTML for displaying the image
-            html = f'<img src="data:image/png;base64,{img_base64}" width="{size[0]}" height="{size[1]}" style="object-fit: contain;">'
-            return html
+            if img_base64:
+                html = f'<img src="data:image/png;base64,{img_base64}" width="{size[0]}" height="{size[1]}" style="object-fit: contain;">'
+                return html
         
-        # Fallback to direct conversion if file doesn't exist
+        # If neither exists, convert the image directly
         buffered = BytesIO()
         img.save(buffered, format="PNG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
