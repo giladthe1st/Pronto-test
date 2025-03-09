@@ -48,14 +48,25 @@ def get_supabase_client(use_service_role=False) -> Client:
     if not SUPABASE_URL:
         raise ValueError("Supabase URL not found in configuration")
     
-    if use_service_role:
-        if not SUPABASE_SERVICE_KEY:
-            raise ValueError("Supabase service key not found in configuration")
-        return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    else:
-        if not SUPABASE_KEY:
-            raise ValueError("Supabase API key not found in configuration")
-        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    key = SUPABASE_SERVICE_KEY if use_service_role else SUPABASE_KEY
+    
+    if not key:
+        key_type = "service key" if use_service_role else "API key"
+        raise ValueError(f"Supabase {key_type} not found in configuration")
+    
+    # Handle different versions of the Supabase client
+    # Some versions accept 'proxy' parameter, others don't
+    try:
+        # First try without any extra parameters
+        return create_client(SUPABASE_URL, key)
+    except TypeError as e:
+        # If we get a TypeError about missing 'proxy', try with proxy=None
+        if "proxy" in str(e):
+            st.warning("Using compatibility mode for Supabase client")
+            # For older versions that require the proxy parameter
+            return create_client(SUPABASE_URL, key, options={"proxy": None})
+        # If it's some other error, re-raise it
+        raise
 
 # User management functions
 def user_exists(email: str) -> bool:
