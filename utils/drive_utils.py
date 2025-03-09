@@ -119,6 +119,10 @@ def download_with_credentials(file_id, cache_path, size=DEFAULT_LOGO_SIZE):
         # Create output directory if it doesn't exist
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         
+        # Ensure the path has a .png extension
+        if not str(cache_path).lower().endswith('.png'):
+            cache_path = str(cache_path) + '.png'
+        
         # Get credentials
         credentials = get_drive_credentials()
         if not credentials:
