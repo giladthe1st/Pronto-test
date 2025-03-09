@@ -34,5 +34,10 @@ def apply_restaurant_styling():
         margin: 25px 0;
         width: 100%;
     }
+    .rating-stars {
+        color: #ff9900;
+        font-size: 1.1em;
+        margin-bottom: 8px;
+    }
     </style>
     """, unsafe_allow_html=True)
