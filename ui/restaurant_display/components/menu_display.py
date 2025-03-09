@@ -23,6 +23,10 @@ def display_menu_section(restaurant):
     def toggle_menu(key=menu_key):
         st.session_state[key] = not st.session_state[key]
     
+    # Check if menu URL is available
+    menu_url = restaurant.get('menu_url', '')
+    has_menu = bool(menu_url)
+    
     # Create an expandable menu section with toggle button
     button_text = "View Menu"
     if st.session_state[menu_key]:
@@ -34,22 +38,28 @@ def display_menu_section(restaurant):
         key=f"btn_{menu_key}", 
         help="Click to expand/collapse", 
         on_click=toggle_menu,
-        use_container_width=True
+        use_container_width=True,
+        disabled=not has_menu
     )
     
     # Show expanded content if this menu is expanded
     if st.session_state[menu_key]:
         st.markdown("<div class='expanded-content'>", unsafe_allow_html=True)
-        st.markdown("<strong>Menu Information:</strong>", unsafe_allow_html=True)
-        st.markdown(f"<a href='{restaurant['menu_url']}' target='_blank'>Open Full Menu in New Tab</a>", unsafe_allow_html=True)
         
-        # Use lazy loading for iframe to improve performance
-        # Only load iframe when menu is expanded
-        if 'menu_url' in restaurant and restaurant['menu_url']:
+        if has_menu:
+            st.markdown("<strong>Menu Information:</strong>", unsafe_allow_html=True)
+            st.markdown(f"<a href='{menu_url}' target='_blank'>Open Full Menu in New Tab</a>", unsafe_allow_html=True)
+            
+            # Use lazy loading for iframe to improve performance
+            # Only load iframe when menu is expanded
             st.components.v1.iframe(
-                restaurant['menu_url'], 
+                menu_url, 
                 height=300, 
                 scrolling=True
             )
+        else:
+            st.markdown("<em>Menu not available for this restaurant</em>", unsafe_allow_html=True)
         
         st.markdown("</div>", unsafe_allow_html=True)
+    elif not has_menu:
+        st.markdown("<em>Menu not available for this restaurant</em>", unsafe_allow_html=True)

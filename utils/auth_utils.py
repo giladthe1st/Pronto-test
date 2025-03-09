@@ -5,13 +5,8 @@ import hashlib
 import streamlit as st
 from typing import Dict, Optional, List
 from database.supabase_client import (
-    user_exists,
-    create_user as supabase_create_user,
     get_user,
     update_user,
-    get_favorites as supabase_get_favorites,
-    add_favorite as supabase_add_favorite,
-    get_role_id,
     get_role_name
 )
 
