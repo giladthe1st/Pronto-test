@@ -4,9 +4,6 @@ Utility functions for interacting with Google Drive in the Pronto application.
 import os
 import io
 from PIL import Image
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-from google.oauth2 import service_account
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -17,14 +14,30 @@ load_dotenv()
 DEFAULT_LOGO_SIZE = (140, 140)
 CREDENTIALS_PATH = "credentials.json"
 
+# Flag to track if Google Drive API is available
+GOOGLE_DRIVE_API_AVAILABLE = False
+
+# Try to import Google Drive API libraries, but don't fail if they're not available
+try:
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaIoBaseDownload
+    from google.oauth2 import service_account
+    GOOGLE_DRIVE_API_AVAILABLE = True
+except ImportError:
+    print("Google Drive API libraries not available. Some functionality will be limited.")
+
 def get_drive_credentials():
     """
     Get Google Drive API credentials from either Streamlit secrets or local file.
     Streamlit secrets take precedence for deployed environments.
     
     Returns:
-        google.oauth2.service_account.Credentials: Service account credentials
+        google.oauth2.service_account.Credentials: Service account credentials or None if not available
     """
+    if not GOOGLE_DRIVE_API_AVAILABLE:
+        print("Google Drive API libraries not available. Cannot get credentials.")
+        return None
+        
     try:
         # First try to get from Streamlit secrets (for deployed app)
         if 'google_drive' in st.secrets:
@@ -95,6 +108,11 @@ def download_with_credentials(file_id, cache_path, size=DEFAULT_LOGO_SIZE):
     Returns:
         PIL.Image or None: Processed image or None if failed
     """
+    # Check if Google Drive API is available
+    if not GOOGLE_DRIVE_API_AVAILABLE:
+        print("Google Drive API libraries not available. Cannot download file.")
+        return None
+        
     try:
         print(f"Using credentials to download file with ID: {file_id}")
         

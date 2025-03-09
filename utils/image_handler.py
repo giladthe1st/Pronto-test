@@ -12,8 +12,27 @@ import base64
 from functools import lru_cache
 import traceback
 
-# Import Google Drive utilities
-from utils.drive_utils import get_file_id_from_drive_url, download_with_credentials, DEFAULT_LOGO_SIZE
+# Import Google Drive utilities with fallback
+try:
+    from utils.drive_utils import (
+        get_file_id_from_drive_url, 
+        download_with_credentials, 
+        DEFAULT_LOGO_SIZE,
+        GOOGLE_DRIVE_API_AVAILABLE
+    )
+except ImportError:
+    # Define fallbacks if drive_utils is not available
+    print("Warning: drive_utils module not available. Using fallback values.")
+    DEFAULT_LOGO_SIZE = (140, 140)
+    GOOGLE_DRIVE_API_AVAILABLE = False
+    
+    def get_file_id_from_drive_url(url):
+        """Fallback implementation"""
+        return None
+        
+    def download_with_credentials(file_id, cache_path, size=DEFAULT_LOGO_SIZE):
+        """Fallback implementation"""
+        return None
 
 # Constants for image handling
 CACHE_DIR = "logo_cache"
@@ -197,6 +216,11 @@ def get_logo_from_drive(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refr
         except Exception as e:
             print(f"Error loading cached image for {restaurant_name}: {e}")
             # If there's an error loading the cached image, we'll try to download it again
+    
+    # If Google Drive API is not available, return placeholder
+    if not GOOGLE_DRIVE_API_AVAILABLE:
+        print(f"Google Drive API not available. Using placeholder for {restaurant_name}")
+        return create_placeholder_image(size)
     
     # Extract file ID from Google Drive URL
     file_id = get_file_id_from_drive_url(url)
