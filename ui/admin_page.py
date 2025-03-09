@@ -56,7 +56,7 @@ def manage_users():
     # Get all users
     try:
         client = get_supabase_client(use_service_role=True)
-        response = client.table('User').select('*').execute()
+        response = client.table('Users').select('*').execute()
         users = response.data
         
         if users:
@@ -75,7 +75,7 @@ def manage_users():
                     password = st.text_input("Password", type="password")
                     
                     # Get role types for dropdown
-                    role_response = client.table('RoleType').select('*').execute()
+                    role_response = client.table('RoleTypes').select('*').execute()
                     role_types = role_response.data
                     role_options = {r['role_type']: r['id'] for r in role_types}
                     
@@ -97,7 +97,7 @@ def manage_users():
                             
                             # Insert the user
                             try:
-                                insert_response = client.table('User').insert(user_data).execute()
+                                insert_response = client.table('Users').insert(user_data).execute()
                                 if insert_response.data:
                                     st.success(f"User {email} added successfully!")
                                     st.rerun()  # Refresh the page to show the new user
@@ -198,7 +198,7 @@ def manage_roles():
     
     try:
         client = get_supabase_client(use_service_role=True)
-        response = client.table('RoleType').select('*').execute()
+        response = client.table('RoleTypes').select('*').execute()
         roles = response.data
         
         if roles:
@@ -221,7 +221,7 @@ def manage_roles():
                             
                             # Insert the role
                             try:
-                                insert_response = client.table('RoleType').insert(role_data).execute()
+                                insert_response = client.table('RoleTypes').insert(role_data).execute()
                                 if insert_response.data:
                                     st.success(f"Role {role_type} added successfully!")
                                     st.rerun()  # Refresh the page to show the new role

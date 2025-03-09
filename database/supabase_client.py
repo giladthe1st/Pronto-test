@@ -81,7 +81,7 @@ def user_exists(email: str) -> bool:
     """
     try:
         client = get_supabase_client()
-        response = client.table('User').select('email').eq('email', email).execute()
+        response = client.table('Users').select('email').eq('email', email).execute()
         return len(response.data) > 0
     except Exception as e:
         st.error(f"Error checking if user exists: {e}")
@@ -110,7 +110,7 @@ def create_user(password: str, email: str, role_id: int = 2) -> bool:
             "role": role_id
         }
         
-        response = client.table('User').insert(user_data).execute()
+        response = client.table('Users').insert(user_data).execute()
         return len(response.data) > 0
     except Exception as e:
         st.error(f"Error creating user: {e}")
@@ -131,7 +131,7 @@ def get_user(email: str) -> Optional[Dict]:
         client = get_supabase_client(use_service_role=True)
         
         # Now try to get the specific user
-        response = client.table('User').select('*').eq('email', email).execute()
+        response = client.table('Users').select('*').eq('email', email).execute()
         if hasattr(response, 'data') and len(response.data) > 0:
             return response.data[0]
         return None
@@ -154,7 +154,7 @@ def update_user(email: str, data: Dict) -> bool:
         # Use service role key for user update to bypass RLS policies
         client = get_supabase_client(use_service_role=True)
         
-        response = client.table('User').update(data).eq('email', email).execute()
+        response = client.table('Users').update(data).eq('email', email).execute()
         return len(response.data) > 0
     except Exception as e:
         st.error(f"Error updating user data: {e}")
@@ -169,7 +169,7 @@ def get_role_types() -> List[Dict]:
     """
     try:
         client = get_supabase_client()
-        response = client.table('RoleType').select('*').execute()
+        response = client.table('RoleTypes').select('*').execute()
         return response.data
     except Exception as e:
         st.error(f"Error getting role types: {e}")
@@ -187,7 +187,7 @@ def get_role_name(role_id: int) -> Optional[str]:
     """
     try:
         client = get_supabase_client()
-        response = client.table('RoleType').select('role_type').eq('id', role_id).execute()
+        response = client.table('RoleTypes').select('role_type').eq('id', role_id).execute()
         
         if len(response.data) > 0:
             return response.data[0]['role_type']
@@ -208,7 +208,7 @@ def get_role_id(role_name: str) -> Optional[int]:
     """
     try:
         client = get_supabase_client()
-        response = client.table('RoleType').select('id').eq('role_type', role_name).execute()
+        response = client.table('RoleTypes').select('id').eq('role_type', role_name).execute()
         
         if len(response.data) > 0:
             return response.data[0]['id']

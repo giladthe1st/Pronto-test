@@ -19,7 +19,7 @@ def main():
     
     # List all users
     try:
-        response = client.table('User').select('*').execute()
+        response = client.table('Users').select('*').execute()
         st.subheader("Users in database:")
         
         if not response.data:
