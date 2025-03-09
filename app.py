@@ -1,11 +1,11 @@
 import streamlit as st
 from utils.image_utils import ensure_directories_exist, clean_cache_directory
 from utils.restaurant_utils import download_google_sheet_data, process_restaurant_data, get_user_location_from_ip, calculate_distance
-from ui.restaurant_display import display_restaurants
+from ui.restaurant_display.restaurant_display import display_restaurants
 from ui.filters import display_filters
 from utils.startup_utils import clear_data_on_startup
 from ui.auth_page import display_auth_page
-from ui.admin_page import display_admin_page
+from ui.admin_display.admin_page import display_admin_page
 import os
 
 # Set page configuration to wide mode

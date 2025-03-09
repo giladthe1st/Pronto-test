@@ -4,12 +4,12 @@ UI components for displaying restaurant information in the Pronto application.
 import streamlit as st
 
 # Import components from individual modules
-from ui.components.styling import apply_restaurant_styling
-from ui.components.logo_display import display_restaurant_logo
-from ui.components.deal_display import display_deal_section
-from ui.components.menu_display import display_menu_section
-from ui.components.reviews_display import display_reviews_section
-from ui.components.location_display import display_location_section
+from ui.restaurant_display.components.styling import apply_restaurant_styling
+from ui.restaurant_display.components.logo_display import display_restaurant_logo
+from ui.restaurant_display.components.deal_display import display_deal_section
+from ui.restaurant_display.components.menu_display import display_menu_section
+from ui.restaurant_display.components.reviews_display import display_reviews_section
+from ui.restaurant_display.components.location_display import display_location_section
 
 def display_restaurants(restaurants, flyer_existence=None, user_location=None, text_filter=""):
     """
