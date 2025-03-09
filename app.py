@@ -4,6 +4,8 @@ from utils.restaurant_utils import download_google_sheet_data, process_restauran
 from ui.restaurant_display import display_restaurants
 from ui.filters import display_filters
 from utils.startup_utils import clear_data_on_startup
+from ui.auth_page import display_auth_page
+from ui.admin_page import display_admin_page
 import os
 
 # Set page configuration to wide mode
@@ -14,6 +16,33 @@ def main():
     # Clear data only on server startup (not on page refreshes)
     clear_data_on_startup()
     
+    # Ensure directories exist at startup
+    ensure_directories_exist()
+    
+    # Ensure logo_images directory exists
+    logo_images_dir = 'logo_images'
+    if not os.path.exists(logo_images_dir):
+        os.makedirs(logo_images_dir)
+    
+    # Clean cache on startup
+    clean_cache_directory()
+    
+    # Check if we're on the admin page
+    if st.session_state.get('page') == 'admin':
+        # Display admin page and check if we should show main content
+        show_main_content = display_admin_page()
+    else:
+        # Display authentication pages or main app based on auth state
+        # If display_auth_page returns False, we're on a dedicated auth page
+        # and should not display the main app content
+        show_main_content = display_auth_page()
+    
+    if show_main_content:
+        # Display the main app content
+        display_main_app()
+
+def display_main_app():
+    """Display the main application content."""
     st.title("🍽️ Pronto")
     
     # Initialize session state for tracking expanded/collapsed states
@@ -32,17 +61,6 @@ def main():
     col1, col2 = st.columns([3, 1])
     with col2:
         st.markdown(f"<div style='text-align: right; padding: 10px; background-color: #f0f2f6; border-radius: 5px;'><strong>My Location:</strong> {st.session_state.user_location['address']}</div>", unsafe_allow_html=True)
-    
-    # Ensure directories exist at startup
-    ensure_directories_exist()
-    
-    # Ensure logo_images directory exists
-    logo_images_dir = 'logo_images'
-    if not os.path.exists(logo_images_dir):
-        os.makedirs(logo_images_dir)
-    
-    # Clean cache on startup
-    clean_cache_directory()
     
     # Download/load Google Sheet data
     df = download_google_sheet_data()
@@ -79,7 +97,7 @@ def main():
                 restaurant['distance'] = f"{distance_mi:.1f} mi"
     
     # Display filters and get filtered restaurants
-    filtered_restaurants, *_, text_filter = display_filters(restaurants)
+    filtered_restaurants, min_rating, min_reviews, sort_by, sort_order, name_filter, deals_filter, max_price = display_filters(restaurants)
     
     # Pre-load flyer existence checks to avoid repeated file system operations
     flyer_existence = {}
@@ -88,7 +106,7 @@ def main():
         flyer_existence[restaurant['name']] = os.path.exists(flyer_path)
     
     # Display restaurants with user's actual location and text filter
-    display_restaurants(filtered_restaurants, flyer_existence, st.session_state.user_location, text_filter)
+    display_restaurants(filtered_restaurants, flyer_existence, st.session_state.user_location, deals_filter)
 
 if __name__ == "__main__":
     main()

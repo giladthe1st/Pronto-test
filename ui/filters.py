@@ -2,6 +2,7 @@
 Filter components for the Pronto application.
 """
 import streamlit as st
+import re
 
 def get_distance_value(restaurant):
     """
@@ -22,98 +23,142 @@ def get_distance_value(restaurant):
     except (ValueError, IndexError, TypeError):
         return 0.0
 
+def extract_all_prices_from_deals(restaurant):
+    """
+    Extract all prices from deals text that have a dollar sign in the format "$Number".
+    
+    Args:
+        restaurant: Restaurant dictionary
+        
+    Returns:
+        list: List of all prices found in deals with dollar signs
+    """
+    # Only match prices with dollar signs in the format "$Number"
+    # Exclude prices that are followed by "each" which typically indicates per-item pricing
+    price_pattern = r'\$(\d+(?:\.\d+)?)(?!\s*each)'  # $20 or $20.99, but not "$0.95 each"
+    
+    prices = []
+    
+    # Check all possible deal fields
+    deal_fields = ['summarized_deals', 'detailed_deals', 'deals']
+    
+    for field in deal_fields:
+        if field in restaurant and restaurant[field]:
+            deal_text = str(restaurant[field])
+            
+            # Find all price matches in the deal text
+            matches = re.findall(price_pattern, deal_text)
+            
+            for match in matches:
+                try:
+                    price = float(match)
+                    # Only include reasonable prices (between 0.01 and 100)
+                    if 0.01 <= price <= 100:
+                        prices.append(price)
+                except (ValueError, TypeError):
+                    continue
+    
+    return prices if prices else []
+
+def extract_price_from_deals(restaurant):
+    """
+    Extract the minimum price from deals text.
+    
+    Args:
+        restaurant: Restaurant dictionary
+        
+    Returns:
+        float: Minimum price found in deals, or float('inf') if no price found
+    """
+    prices = extract_all_prices_from_deals(restaurant)
+    return min(prices) if prices else float('inf')
+
 def display_filters(restaurants):
     """
-    Display filter controls for restaurants.
+    Display filter controls for restaurants in the sidebar.
     
     Args:
         restaurants: List of restaurant dictionaries
         
     Returns:
-        tuple: (filtered_restaurants, distance_filter, min_rating, min_reviews, sort_by, sort_order, text_filter)
+        tuple: (filtered_restaurants, distance_filter, min_rating, min_reviews, sort_by, sort_order, name_filter, deals_filter, max_price)
     """
     if not restaurants:
-        return [], 0, 0, 0, "Distance", "Descending", ""
+        return [], 0, 0, "Distance", "Descending", "", "", 100
     
-    # Add text filter at the top
-    text_filter = st.text_input("Search deals by text", placeholder="Type to filter deals...")
+    # Add a header to the sidebar
+    st.sidebar.header("Filters")
     
-    # Create 5 columns for filters in one line
-    filter_col1, filter_col2, filter_col3, filter_col4, filter_col5 = st.columns(5)
+    # Filter by restaurant name
+    name_filter = st.sidebar.text_input("Filter by restaurant name", placeholder="Search restaurant names...")
     
-    # Distance filter
-    with filter_col1:
-        # Safely get max distance with error handling
-        distances = [get_distance_value(r) for r in restaurants]
-        max_distance = max(distances) if distances else 10.0  # Default to 10 miles if no data
-        
-        # Ensure max_distance is greater than 0 to prevent RangeError
-        if max_distance <= 0.0:
-            max_distance = 10.0  # Default to 10 miles if all distances are 0
-        
-        distance_filter = st.slider(
-            "Max Distance (mi)",
-            0.0, max_distance, max_distance, 0.1
-        )
+    # Filter by deals
+    deals_filter = st.sidebar.text_input("Filter by deals", placeholder="Search deals...")
     
-    # Rating filter
-    with filter_col2:
-        min_rating = st.slider(
-            "Min Rating",
-            0.0, 10.0, 0.0, 0.5
-        )
+    # Max Deal Price
+    max_price = st.sidebar.number_input(
+        "Max Deal Price ($)",
+        min_value=0,
+        max_value=100,
+        value=100,
+        step=5
+    )
     
-    # Review count filter
-    with filter_col3:
-        max_reviews = max([r.get('review_count', 0) for r in restaurants]) if restaurants else 100
-        # Ensure max is at least 1 more than min to prevent RangeError
-        if max_reviews == 0:
-            max_reviews = 1
-        
-        min_reviews = st.slider(
-            "Min Reviews",
-            0, max_reviews, 0
-        )
+    # Min Reviews
+    # Get all review counts, ensuring they are integers
+    review_counts = [int(r.get('review_count', 0)) for r in restaurants]
+    max_reviews = max(review_counts) if review_counts else 100
+    
+    min_reviews = st.sidebar.slider(
+        "Min Reviews",
+        0, max_reviews, 0, 50
+    )
+    
+    # Min Rating
+    min_rating = st.sidebar.slider(
+        "Min Rating",
+        0.0, 10.0, 0.0, 0.5
+    )
     
     # Sort by option
-    with filter_col4:
-        sort_by = st.selectbox(
-            "Sort By",
-            ["Distance", "Rating", "Review Count"]
-        )
+    sort_by = st.sidebar.selectbox(
+        "Sort By",
+        ["Distance", "Rating", "Review Count", "Price"]
+    )
     
     # Sort order option
-    with filter_col5:
-        sort_order = st.radio(
-            "Sort Order",
-            ["Ascending", "Descending"],
-            horizontal=True
-        )
+    sort_order = st.sidebar.radio(
+        "Sort Order",
+        ["Ascending", "Descending"],
+        horizontal=True
+    )
     
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Add a separator in the sidebar
+    st.sidebar.markdown("---")
     
     # Apply filters and sorting
     filtered_restaurants = apply_filters_and_sorting(
-        restaurants, distance_filter, min_rating, min_reviews, sort_by, sort_order, text_filter
+        restaurants, min_rating, min_reviews, sort_by, sort_order, name_filter, deals_filter, max_price
     )
     
     # Show how many restaurants match the filters
     st.subheader(f"Found {len(filtered_restaurants)} restaurants")
     
-    return filtered_restaurants, distance_filter, min_rating, min_reviews, sort_by, sort_order, text_filter
+    return filtered_restaurants, min_rating, min_reviews, sort_by, sort_order, name_filter, deals_filter, max_price
 
-def apply_filters_and_sorting(restaurants, distance_filter, min_rating, min_reviews, sort_by, sort_order, text_filter=""):
+def apply_filters_and_sorting(restaurants, min_rating, min_reviews, sort_by, sort_order, name_filter="", deals_filter="", max_price=100):
     """
     Apply filters and sorting to the restaurant list.
     
     Args:
         restaurants: List of restaurant dictionaries
-        distance_filter: Maximum distance in miles
         min_rating: Minimum rating (0-10)
         min_reviews: Minimum number of reviews
-        sort_by: Field to sort by ("Distance", "Rating", or "Review Count")
+        sort_by: Field to sort by ("Distance", "Rating", "Review Count", or "Price")
         sort_order: Sort order ("Ascending" or "Descending")
-        text_filter: Text to filter deals by
+        name_filter: Text to filter restaurant names by
+        deals_filter: Text to filter deals by
+        max_price: Maximum price in deals
         
     Returns:
         list: Filtered and sorted list of restaurants
@@ -121,19 +166,21 @@ def apply_filters_and_sorting(restaurants, distance_filter, min_rating, min_revi
     if not restaurants:
         return []
     
-    # Apply distance filter using the helper function
-    filtered = [r for r in restaurants if get_distance_value(r) <= distance_filter]
-    
     # Normalize min_rating from 0-10 scale to 0-5 scale used internally
-    normalized_min_rating = (min_rating / 10) * 5
+    normalized_min_rating = min_rating / 2  # Convert from 0-10 scale to 0-5 scale
     
     # Apply review filters with safe access
-    filtered = [r for r in filtered if r.get('rating', 0) >= normalized_min_rating and r.get('review_count', 0) >= min_reviews]
+    filtered = [r for r in restaurants if r.get('rating', 0) >= normalized_min_rating and int(r.get('review_count', 0)) >= min_reviews]
     
-    # Apply text filter if provided
-    if text_filter:
-        text_filter = text_filter.lower()
-        filtered_by_text = []
+    # Apply name filter if provided
+    if name_filter:
+        name_filter = name_filter.lower()
+        filtered = [r for r in filtered if 'name' in r and r['name'] and name_filter in r['name'].lower()]
+    
+    # Apply deals filter if provided
+    if deals_filter:
+        deals_filter = deals_filter.lower()
+        filtered_by_deals = []
         
         for restaurant in filtered:
             # Check for matches in different deal structures
@@ -141,28 +188,36 @@ def apply_filters_and_sorting(restaurants, distance_filter, min_rating, min_revi
             
             # Check new deal structure (summarized_deals and detailed_deals)
             if 'summarized_deals' in restaurant and restaurant['summarized_deals']:
-                if text_filter in restaurant['summarized_deals'].lower():
+                if deals_filter in restaurant['summarized_deals'].lower():
                     deal_match = True
             
             if not deal_match and 'detailed_deals' in restaurant and restaurant['detailed_deals']:
-                if text_filter in restaurant['detailed_deals'].lower():
+                if deals_filter in restaurant['detailed_deals'].lower():
                     deal_match = True
             
             # Check legacy deal structure
             if not deal_match and 'deals' in restaurant and restaurant['deals']:
-                if text_filter in restaurant['deals'].lower():
-                    deal_match = True
-            
-            # Also check restaurant name for matches
-            if not deal_match and 'name' in restaurant and restaurant['name']:
-                if text_filter in restaurant['name'].lower():
+                if deals_filter in restaurant['deals'].lower():
                     deal_match = True
                     
             # Include restaurant if any match found
             if deal_match:
-                filtered_by_text.append(restaurant)
+                filtered_by_deals.append(restaurant)
         
-        filtered = filtered_by_text
+        filtered = filtered_by_deals
+    
+    # Apply price filter if provided
+    if max_price < 100:  # Only apply if not the default value
+        price_filtered = []
+        for r in filtered:
+            # Extract all prices from the restaurant's deals
+            prices = extract_all_prices_from_deals(r)
+            
+            # Include the restaurant if any of its prices are less than or equal to max_price
+            if any(price <= max_price for price in prices):
+                price_filtered.append(r)
+                
+        filtered = price_filtered
     
     # Apply sorting with safe access
     if sort_by == "Distance":
@@ -170,6 +225,8 @@ def apply_filters_and_sorting(restaurants, distance_filter, min_rating, min_revi
     elif sort_by == "Rating":
         filtered.sort(key=lambda r: r.get('rating', 0), reverse=(sort_order == "Descending"))
     elif sort_by == "Review Count":
-        filtered.sort(key=lambda r: r.get('review_count', 0), reverse=(sort_order == "Descending"))
+        filtered.sort(key=lambda r: int(r.get('review_count', 0)), reverse=(sort_order == "Descending"))
+    elif sort_by == "Price":
+        filtered.sort(key=lambda r: extract_price_from_deals(r), reverse=(sort_order == "Descending"))
     
     return filtered

@@ -19,8 +19,19 @@ def apply_restaurant_styling():
         height: 35px;
     }
     .restaurant-divider {
-        border-bottom: 1px solid #f0f2f6;
+        border-bottom: 2px solid #e0e2e6;
         margin: 15px 0;
+        width: 100%;
+    }
+    .filters-container {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .filters-divider {
+        border-bottom: 3px solid #e0e2e6;
+        margin: 25px 0;
         width: 100%;
     }
     </style>
