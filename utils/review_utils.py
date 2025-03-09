@@ -18,10 +18,10 @@ def parse_reviews(review_str):
         if not review_str:
             return 0.0, 0
             
-        # Check if we're using the new format (contains "Total Reviews:" and "Average Rating:")
-        if "Total Reviews:" in review_str and "Average Rating:" in review_str:
+        # Check if we're using the new format (contains "Total Reviews:" or "Total reviews:")
+        if "Total Reviews:" in review_str or "Total reviews:" in review_str:
             # Extract review count - handle both formats: "Total Reviews: 120" and "Total reviews: 120"
-            count_match = re.search(r'Total [Rr]eviews:?\s*([0-9,]+)', review_str)
+            count_match = re.search(r'Total [Rr]eviews:?\s*:?\s*([0-9,]+)', review_str)
             if count_match:
                 # Remove commas from numbers like "2,804"
                 count_str = count_match.group(1).replace(',', '')
