@@ -212,6 +212,7 @@ def get_logo_from_drive(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refr
             # Resize if needed
             if img.size != size:
                 img.thumbnail(size, Image.LANCZOS)
+            print(f"Using cached image for {restaurant_name} from {cache_path}")
             return img
         except Exception as e:
             print(f"Error loading cached image for {restaurant_name}: {e}")
@@ -239,22 +240,25 @@ def get_logo_from_drive(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refr
     return create_placeholder_image(size)
 
 @lru_cache(maxsize=100)
-def get_image_base64(img):
+def get_image_base64(img_path):
     """
-    Convert a PIL image to base64 for embedding in HTML.
+    Convert an image file to base64 for embedding in HTML.
     
     Args:
-        img (PIL.Image): Image to convert
+        img_path (str): Path to the image file
         
     Returns:
         str: Base64 encoded image
     """
-    if not img:
+    if not img_path or not os.path.exists(img_path):
         return None
     
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
+    try:
+        with open(img_path, 'rb') as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except Exception as e:
+        print(f"Error encoding image to base64: {e}")
+        return None
 
 def display_logo(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refresh=False):
     """
@@ -273,13 +277,33 @@ def display_logo(url, restaurant_name, size=DEFAULT_LOGO_SIZE, force_refresh=Fal
         # Get the logo image
         img = get_logo_from_drive(url, restaurant_name, size, force_refresh)
         
-        # Convert to base64
-        img_base64 = get_image_base64(img)
+        # Get the cache path
+        cache_path = get_cache_path(url, restaurant_name)
         
-        # Create HTML for displaying the image
+        # If the image is not already saved (e.g., it's a placeholder), save it
+        if not os.path.exists(cache_path) and img:
+            try:
+                # Ensure the directory exists
+                os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+                # Save the image
+                img.save(cache_path, format="PNG")
+            except Exception as e:
+                print(f"Error saving image to cache: {e}")
+        
+        # Convert to base64 using the file path
+        if os.path.exists(cache_path):
+            img_base64 = get_image_base64(cache_path)
+            # Create HTML for displaying the image
+            html = f'<img src="data:image/png;base64,{img_base64}" width="{size[0]}" height="{size[1]}" style="object-fit: contain;">'
+            return html
+        
+        # Fallback to direct conversion if file doesn't exist
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
         html = f'<img src="data:image/png;base64,{img_base64}" width="{size[0]}" height="{size[1]}" style="object-fit: contain;">'
-        
         return html
+        
     except Exception as e:
         print(f"Error displaying logo for {restaurant_name}: {e}")
         traceback.print_exc()

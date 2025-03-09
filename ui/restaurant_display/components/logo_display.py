@@ -2,7 +2,7 @@
 Logo display functionality for restaurant UI.
 """
 import streamlit as st
-from utils.image_handler import get_logo_from_drive
+from utils.image_handler import display_logo
 
 def display_restaurant_logo(restaurant_name, logo_url=None):
     """
@@ -21,18 +21,19 @@ def display_restaurant_logo(restaurant_name, logo_url=None):
     try:
         # Get the restaurant logo using our improved image handler
         if logo_url and logo_url.strip():
-            # Option 1: Use the streamlit image display
-            img = get_logo_from_drive(logo_url, restaurant_name)
-            st.image(img, width=140)
-            
-            # Option 2: Alternative HTML-based display with more control
-            # html = display_logo(logo_url, restaurant_name)
-            # st.markdown(html, unsafe_allow_html=True)
+            # Use HTML-based display with base64 encoding for better compatibility in deployed environments
+            html = display_logo(logo_url, restaurant_name)
+            st.markdown(html, unsafe_allow_html=True)
         else:
-            # No logo URL provided, show placeholder
-            st.markdown('<span style="font-size: 80px; color: #666;">🍽️</span>', unsafe_allow_html=True)
+            # Display a placeholder for restaurants without logos
+            st.markdown(
+                '<div style="width:140px;height:140px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#999;">No Logo</div>',
+                unsafe_allow_html=True
+            )
     except Exception as e:
-        # Handle any unexpected errors
+        # Fallback in case of any errors
+        st.markdown(
+            '<div style="width:140px;height:140px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#999;">Error</div>',
+            unsafe_allow_html=True
+        )
         st.error(f"Error displaying logo: {e}")
-        # Show a fallback placeholder
-        st.markdown('<span style="font-size: 80px; color: #666;">🍽️</span>', unsafe_allow_html=True)
