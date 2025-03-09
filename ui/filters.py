@@ -95,14 +95,48 @@ def display_filters(restaurants):
     # Filter by deals
     deals_filter = st.sidebar.text_input("Filter by deals", placeholder="Search deals...")
     
-    # Max Deal Price
-    max_price = st.sidebar.number_input(
-        "Max Deal Price ($)",
-        min_value=0,
-        max_value=100,
-        value=100,
-        step=5
+    # Customer reviews filter (radio buttons with star ratings)
+    st.sidebar.subheader("Customer reviews")
+    rating_options = [
+        ("All", 0.0),
+        ("★★★★☆ and up", 4.0),
+        ("★★★☆☆ and up", 3.0),
+        ("★★☆☆☆ and up", 2.0),
+        ("★☆☆☆☆ and up", 1.0)
+    ]
+    
+    rating_selection = st.sidebar.radio(
+        label="",
+        options=[option[0] for option in rating_options],
+        index=0,
+        key="rating_filter",
+        label_visibility="collapsed"
     )
+    
+    # Convert the selected rating option to a numeric value
+    min_rating = next((option[1] for option in rating_options if option[0] == rating_selection), 0.0)
+    # Convert from 0-5 scale to 0-10 scale used in the UI
+    min_rating = min_rating * 2
+    
+    # Price filter (radio buttons with price ranges)
+    st.sidebar.subheader("Price")
+    price_options = [
+        ("All", 100),
+        ("Under $10", 10),
+        ("Under $25", 25),
+        ("Under $50", 50)
+    ]
+    
+    price_selection = st.sidebar.radio(
+        label="",
+        options=[option[0] for option in price_options],
+        index=0,
+        key="price_filter",
+        label_visibility="collapsed"
+    )
+    
+    # Convert the selected price option to a numeric value
+    max_price = next((option[1] for option in price_options if option[0] == price_selection), 100)
     
     # Min Reviews
     # Get all review counts, ensuring they are integers
@@ -112,12 +146,6 @@ def display_filters(restaurants):
     min_reviews = st.sidebar.slider(
         "Min Reviews",
         0, max_reviews, 0, 50
-    )
-    
-    # Min Rating
-    min_rating = st.sidebar.slider(
-        "Min Rating",
-        0.0, 10.0, 0.0, 0.5
     )
     
     # Sort by option
@@ -200,26 +228,26 @@ def apply_filters_and_sorting(restaurants, min_rating, min_reviews, sort_by, sor
                 if deals_filter in restaurant['deals'].lower():
                     deal_match = True
                     
-            # Include restaurant if any match found
             if deal_match:
                 filtered_by_deals.append(restaurant)
         
         filtered = filtered_by_deals
     
-    # Apply price filter if provided
-    if max_price < 100:  # Only apply if not the default value
-        price_filtered = []
-        for r in filtered:
-            # Extract all prices from the restaurant's deals
-            prices = extract_all_prices_from_deals(r)
+    # Apply price filter
+    if max_price < float('inf'):
+        filtered_by_price = []
+        
+        for restaurant in filtered:
+            # Get the minimum price from deals
+            min_price = extract_price_from_deals(restaurant)
             
-            # Include the restaurant if any of its prices are less than or equal to max_price
-            if any(price <= max_price for price in prices):
-                price_filtered.append(r)
-                
-        filtered = price_filtered
+            # Include restaurants with no price or price below max_price
+            if min_price == float('inf') or min_price <= max_price:
+                filtered_by_price.append(restaurant)
+        
+        filtered = filtered_by_price
     
-    # Apply sorting with safe access
+    # Apply sorting
     if sort_by == "Distance":
         filtered.sort(key=lambda r: get_distance_value(r), reverse=(sort_order == "Descending"))
     elif sort_by == "Rating":

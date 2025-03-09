@@ -28,36 +28,6 @@ def hash_password(password: str) -> str:
     # Simple hash for now - in a real application, you'd want to use a more secure method
     return hashlib.sha256(password.encode()).hexdigest()
 
-def register_user(password: str, email: str, role: str = "User") -> bool:
-    """
-    Register a new user.
-    
-    Args:
-        password: Password for the new user
-        password: Password for the new user
-        email: Email for the new user
-        role: Role for the new user (default: "User")
-        
-    Returns:
-        True if registration successful, False otherwise
-    """
-    # Check if email already exists
-    if user_exists(email):
-        st.error("Email already exists")
-        return False
-    
-    # Hash the password
-    hashed_password = hash_password(password)
-    
-    # Get role ID from role name
-    role_id = get_role_id(role)
-    if role_id is None:
-        # Default to User role (ID: 2) if role not found
-        role_id = 2
-    
-    # Create the user in Supabase
-    return supabase_create_user(hashed_password, email, role_id)
-
 def authenticate_user(email: str, password: str) -> bool:
     """
     Authenticate a user with email and password.
