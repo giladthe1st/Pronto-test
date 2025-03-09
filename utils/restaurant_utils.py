@@ -6,11 +6,10 @@ import streamlit as st
 # Import functionality from modular utility files
 from utils.review_utils import parse_reviews
 from utils.location_utils import extract_coordinates_from_maps_url, get_winnipeg_coordinates_by_area, get_user_location_from_ip, geocode_address
-from utils.data_utils import download_google_sheet_data
 from utils.distance_utils import calculate_distance
 
 # Re-export functions to maintain backward compatibility
-__all__ = ['process_restaurant_data', 'download_google_sheet_data', 'get_user_location_from_ip', 'calculate_distance']
+__all__ = ['process_restaurant_data', 'get_user_location_from_ip', 'calculate_distance']
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def process_restaurant_data(df):

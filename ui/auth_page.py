@@ -95,17 +95,17 @@ def display_login_page():
         st.text_input("Password", type="password", key="login_password")
         st.form_submit_button("Login", on_click=login_callback)
 
-def display_auth_page():
-    """Display the authentication components and check if user is authenticated."""
-    # Initialize authentication state
+def display_auth_page() -> bool:
+    """Main authentication page handler."""
+    # Ensure auth state is initialized
     initialize_auth_state()
     
-    # Display the appropriate page based on auth_page state
-    if st.session_state.auth_page == "login":
+    # Check auth page state (now guaranteed to exist)
+    current_auth_page = st.session_state.auth_page
+    
+    if current_auth_page == "login":
         display_login_page()
-        return False  # Don't display main content
-    else:
-        # Display the login/logout buttons
-        display_auth_button()
-        # Return authentication status for the main page
-        return True  # Always show main content for the main page
+        return False
+    
+    display_auth_button()
+    return True

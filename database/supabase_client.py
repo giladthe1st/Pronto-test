@@ -217,57 +217,251 @@ def get_role_id(role_name: str) -> Optional[int]:
         st.error(f"Error getting role ID: {e}")
         return None
 
-# Favorites management functions
-def get_favorites(user_id: int) -> List[str]:
+# Restaurant data functions
+def get_restaurants(filters=None, use_service_role=True) -> List[Dict]:
     """
-    Get a user's favorite restaurants.
+    Get restaurant data from the database with optional filtering.
     
     Args:
-        user_id: User ID to get favorites for
+        filters (dict, optional): Dictionary of filter conditions
+        use_service_role (bool): Whether to use service role for the query
         
     Returns:
-        List of restaurant IDs in favorites
+        List of restaurant dictionaries
     """
     try:
-        client = get_supabase_client()
-        response = client.table('Favorites').select('restaurant_id').eq('user_id', user_id).execute()
+        client = get_supabase_client(use_service_role=use_service_role)
         
-        if len(response.data) > 0:
-            return [item['restaurant_id'] for item in response.data]
-        return []
+        # Start with a base query
+        query = client.table('Restaurants').select('*')
+        
+        # Apply filters if provided
+        if filters:
+            for field, value in filters.items():
+                if isinstance(value, list):
+                    # For list values, use 'in' operator
+                    query = query.in_(field, value)
+                else:
+                    # For single values, use 'eq' operator
+                    query = query.eq(field, value)
+        
+        # Execute the query
+        response = query.execute()
+        restaurants = response.data
+        
+        print(f"Found {len(restaurants)} restaurants")
+        
+        # If we have restaurants, fetch deals for each one
+        if restaurants:
+            # Get all deals
+            deals_response = client.table('Deals').select('*').execute()
+            deals = deals_response.data
+            
+            print(f"Found {len(deals)} deals in the Deals table")
+            
+            # Create a mapping of restaurant_id to deals
+            restaurant_deals = {}
+            for deal in deals:
+                restaurant_id = deal.get('restaurant_id')
+                if restaurant_id not in restaurant_deals:
+                    restaurant_deals[restaurant_id] = []
+                restaurant_deals[restaurant_id].append(deal)
+            
+            # Add deals to each restaurant
+            for restaurant in restaurants:
+                restaurant_id = restaurant.get('id')
+                print(f"Processing restaurant ID: {restaurant_id}, Name: {restaurant.get('name', 'Unknown')}")
+                
+                # Print available fields in restaurant
+                print(f"Restaurant fields: {list(restaurant.keys())}")
+                
+                if restaurant_id in restaurant_deals:
+                    # Get deals for this restaurant
+                    restaurant_deals_list = restaurant_deals[restaurant_id]
+                    print(f"  Found {len(restaurant_deals_list)} deals for restaurant {restaurant_id}")
+                    
+                    # Format deals for the UI
+                    if restaurant_deals_list:
+                        # Create summarized_deals and detailed_deals strings
+                        summarized_deals = []
+                        detailed_deals = []
+                        
+                        for deal in restaurant_deals_list:
+                            summarized_deals.append(deal.get('summarized_deal', ''))
+                            detailed_deals.append(deal.get('details', ''))
+                        
+                        # Join with the separator expected by the UI
+                        restaurant['summarized_deals'] = ' -> '.join(summarized_deals)
+                        restaurant['detailed_deals'] = ' -> '.join(detailed_deals)
+                        
+                        # Legacy format for backward compatibility
+                        restaurant['deals'] = restaurant['summarized_deals']
+                        
+                        print(f"  Added deals to restaurant {restaurant_id}: {restaurant['deals']}")
+                else:
+                    print(f"  No deals found for restaurant {restaurant_id}")
+        
+        return restaurants
     except Exception as e:
-        st.error(f"Error getting favorites: {e}")
+        print(f"Error getting restaurants: {e}")
         return []
 
-def add_favorite(user_id: int, restaurant_id: str) -> bool:
+def get_restaurant_categories(restaurant_id=None, use_service_role=True) -> List[Dict]:
     """
-    Add a restaurant to a user's favorites.
+    Get restaurant categories with optional filtering by restaurant ID.
     
     Args:
-        user_id: User ID to update
-        restaurant_id: ID of restaurant to add to favorites
+        restaurant_id (int, optional): Filter by specific restaurant ID
+        use_service_role (bool): Whether to use service role for the query
         
     Returns:
-        True if update successful, False otherwise
+        List of restaurant category dictionaries
     """
     try:
-        client = get_supabase_client()
+        client = get_supabase_client(use_service_role=use_service_role)
+        query = client.table('Restaurant_Categories').select('*')
         
-        # Check if favorite already exists
-        response = client.table('Favorites').select('*').eq('user_id', user_id).eq('restaurant_id', restaurant_id).execute()
+        if restaurant_id:
+            query = query.eq('restaurant_id', restaurant_id)
+            
+        response = query.execute()
+        return response.data
+    except Exception as e:
+        st.error(f"Error retrieving restaurant categories: {e}")
+        return []
+
+def get_restaurant_with_details(restaurant_id, use_service_role=True) -> Optional[Dict]:
+    """
+    Get a restaurant with all its related details (categories, menu items, etc.)
+    
+    Args:
+        restaurant_id: ID of the restaurant to retrieve
+        use_service_role (bool): Whether to use service role for the query
         
-        if len(response.data) > 0:
-            # Already a favorite
-            return True
+    Returns:
+        Dictionary with restaurant data and related details or None if not found
+    """
+    try:
+        client = get_supabase_client(use_service_role=use_service_role)
         
-        # Add to favorites
-        favorite_data = {
-            "user_id": user_id,
-            "restaurant_id": restaurant_id
+        # Get the restaurant
+        restaurant_response = client.table('Restaurants').select('*').eq('id', restaurant_id).execute()
+        
+        if not restaurant_response.data:
+            return None
+            
+        restaurant = restaurant_response.data[0]
+        
+        # Get categories for this restaurant
+        categories_response = client.table('Restaurant_Categories')\
+            .select('category_id')\
+            .eq('restaurant_id', restaurant_id)\
+            .execute()
+            
+        category_ids = [item['category_id'] for item in categories_response.data]
+        
+        if category_ids:
+            categories_response = client.table('Categories')\
+                .select('*')\
+                .in_('id', category_ids)\
+                .execute()
+            restaurant['categories'] = categories_response.data
+        else:
+            restaurant['categories'] = []
+        
+        # Add any other related data here (deals, menu items, etc.)
+        
+        return restaurant
+    except Exception as e:
+        st.error(f"Error retrieving restaurant with details: {e}")
+        return None
+
+def process_restaurant_data_from_db(restaurants):
+    """
+    Process restaurant data from the database to match the format expected by the UI.
+    
+    Args:
+        restaurants: List of restaurant dictionaries from the database
+        
+    Returns:
+        List of processed restaurant dictionaries
+    """
+    if not restaurants:
+        return []
+        
+    processed_restaurants = []
+    
+    for restaurant in restaurants:
+        processed = restaurant.copy()
+        
+        print(f"Processing restaurant for UI: {processed.get('name', 'Unknown')}")
+        print(f"Original fields: {list(processed.keys())}")
+        
+        # Map database field names to UI expected field names
+        field_mappings = {
+            'average_rating': 'rating',
+            'reviews_count': 'review_count',
+            'website_url': 'website',
+            'logo_url': 'logo_url',
+            'maps_url': 'maps_url'
         }
         
-        response = client.table('Favorites').insert(favorite_data).execute()
-        return len(response.data) > 0
-    except Exception as e:
-        st.error(f"Error adding favorite: {e}")
-        return False
+        for db_field, ui_field in field_mappings.items():
+            if db_field in processed:
+                processed[ui_field] = processed.get(db_field)
+                print(f"Mapped {db_field} -> {ui_field}: {processed[ui_field]}")
+        
+        # Set default values for missing fields
+        if 'rating' not in processed or processed['rating'] is None:
+            processed['rating'] = 0.0
+            
+        if 'review_count' not in processed or processed['review_count'] is None:
+            processed['review_count'] = 0
+            
+        if 'distance' not in processed:
+            processed['distance'] = 'Unknown'
+            
+        # Ensure website field exists
+        if 'website' not in processed or processed['website'] is None:
+            processed['website'] = '#'
+            
+        # Ensure location field exists (using address)
+        if 'location' not in processed:
+            processed['location'] = processed.get('address', '')
+            
+        # Ensure other required fields exist
+        for field in ['address', 'logo_url', 'maps_url', 'menu_url']:
+            if field not in processed or processed[field] is None:
+                processed[field] = ''
+        
+        # Since reviews_data isn't directly in the schema, we'll create it from available data
+        rating = processed.get('rating', 0)
+        review_count = processed.get('review_count', 0)
+        
+        # Check if we have any reviews
+        if review_count > 0:
+            processed['reviews_data'] = f"Rating: {rating}/5 based on {review_count} reviews."
+            processed['reviews'] = processed['reviews_data']
+            print(f"Created reviews data: {processed['reviews_data']}")
+        else:
+            processed['reviews_data'] = ''
+            processed['reviews'] = ''
+            print("No reviews available")
+        
+        # Deals will be handled by the get_restaurants function
+        # Just ensure the fields exist with defaults
+        for field in ['deals', 'summarized_deals', 'detailed_deals']:
+            if field not in processed or processed[field] is None:
+                processed[field] = ''
+            
+        # Ensure coordinates exist
+        if ('latitude' not in processed or processed['latitude'] is None or
+            'longitude' not in processed or processed['longitude'] is None):
+            # Default to downtown Winnipeg if no coordinates
+            processed['latitude'] = 49.8951
+            processed['longitude'] = -97.1384
+        
+        print(f"Final UI fields: {list(processed.keys())}")
+        processed_restaurants.append(processed)
+    
+    return processed_restaurants

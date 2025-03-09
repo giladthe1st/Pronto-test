@@ -13,11 +13,14 @@ def display_location_section(restaurant, user_location=None):
         user_location: Dictionary containing user's latitude and longitude
     """
     st.markdown("<div class='section-header'>Location</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='restaurant-location'><strong>Address:</strong> {restaurant['location']}</div>", unsafe_allow_html=True)
+    
+    # Safely get location with fallback
+    location = restaurant.get('location', 'Address not available')
+    st.markdown(f"<div class='restaurant-location'><strong>Address:</strong> {location}</div>", unsafe_allow_html=True)
     
     # Calculate and display distance if we have both user location and restaurant coordinates
     has_user_location = user_location and user_location['latitude'] is not None and user_location['longitude'] is not None
-    has_restaurant_coords = 'latitude' in restaurant and 'longitude' in restaurant
+    has_restaurant_coords = 'latitude' in restaurant and 'longitude' in restaurant and restaurant['latitude'] is not None and restaurant['longitude'] is not None
     
     if has_user_location and has_restaurant_coords:
         display_calculated_distance(restaurant, user_location)
@@ -25,8 +28,12 @@ def display_location_section(restaurant, user_location=None):
         # Display default distance if we don't have coordinates
         st.markdown(f"<div class='restaurant-distance'><strong>Distance:</strong> {restaurant.get('distance', 'Unknown')}</div>", unsafe_allow_html=True)
     
-    # Display Google Maps link
-    st.markdown(f"<div class='restaurant-info'><a href='{restaurant['maps_url']}' target='_blank'>📍 Get Directions</a></div>", unsafe_allow_html=True)
+    # Display Google Maps link if available
+    maps_url = restaurant.get('maps_url', '')
+    if maps_url:
+        st.markdown(f"<div class='restaurant-info'><a href='{maps_url}' target='_blank'>📍 Get Directions</a></div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='restaurant-info'>📍 Directions not available</div>", unsafe_allow_html=True)
 
 def display_calculated_distance(restaurant, user_location):
     """

@@ -39,14 +39,17 @@ def display_reviews_section(restaurant):
         )
     
     # Check if we have the new reviews_data format
-    if 'reviews_data' in restaurant and restaurant['reviews_data']:
+    reviews_data = restaurant.get('reviews_data', '')
+    reviews_legacy = restaurant.get('reviews', '')
+    
+    if reviews_data:
         # Display reviews_data content directly with line breaks
-        reviews_data = restaurant['reviews_data'].replace('\n', '<br>')
-        st.markdown(f"<div class='restaurant-reviews'>{reviews_data}</div>", unsafe_allow_html=True)
+        reviews_data_formatted = reviews_data.replace('\n', '<br>')
+        st.markdown(f"<div class='restaurant-reviews'>{reviews_data_formatted}</div>", unsafe_allow_html=True)
     
     # Fall back to old format if reviews_data is not available
-    elif 'reviews' in restaurant and restaurant['reviews']:
-        st.markdown(f"<div class='restaurant-reviews'>{restaurant['reviews']}</div>", unsafe_allow_html=True)
+    elif reviews_legacy:
+        st.markdown(f"<div class='restaurant-reviews'>{reviews_legacy}</div>", unsafe_allow_html=True)
     
     else:
         st.info("No reviews available for this restaurant.")

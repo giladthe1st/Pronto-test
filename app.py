@@ -1,11 +1,12 @@
 import streamlit as st
-from utils.image_utils import ensure_directories_exist, clean_cache_directory
-from utils.restaurant_utils import download_google_sheet_data, process_restaurant_data, get_user_location_from_ip, calculate_distance
+from utils.image_handler import ensure_cache_directory, ensure_directories_exist
+from utils.location_utils import get_user_location_from_ip
 from ui.restaurant_display.restaurant_display import display_restaurants
 from ui.filters import display_filters
 from utils.startup_utils import clear_data_on_startup
-from ui.auth_page import display_auth_page
+from ui.auth_page import display_auth_page, initialize_auth_state
 from ui.admin_display.admin_page import display_admin_page
+from utils.db_data_utils import load_restaurant_data_from_db, process_restaurant_locations
 import os
 
 # Set page configuration to wide mode
@@ -19,13 +20,15 @@ def main():
     # Ensure directories exist at startup
     ensure_directories_exist()
     
-    # Ensure logo_images directory exists
-    logo_images_dir = 'logo_images'
-    if not os.path.exists(logo_images_dir):
-        os.makedirs(logo_images_dir)
+    # Ensure image cache directory exists for the new image handler
+    ensure_cache_directory()
     
-    # Clean cache on startup
-    clean_cache_directory()
+    # Initialize authentication state
+    initialize_auth_state()
+    
+    # Initialize page state if not already present
+    if 'page' not in st.session_state:
+        st.session_state.page = 'main'
     
     # Check if we're on the admin page
     if st.session_state.get('page') == 'admin':
@@ -62,39 +65,15 @@ def display_main_app():
     with col2:
         st.markdown(f"<div style='text-align: right; padding: 10px; background-color: #f0f2f6; border-radius: 5px;'><strong>My Location:</strong> {st.session_state.user_location['address']}</div>", unsafe_allow_html=True)
     
-    # Download/load Google Sheet data
-    df = download_google_sheet_data()
-    
-    # Process the data with caching
-    restaurants = process_restaurant_data(df)
+    # Load restaurant data from database
+    restaurants = load_restaurant_data_from_db()
     
     if not restaurants:
-        st.error("No data available. Please check your Google Sheets connection.")
+        st.error("No data available. Please check your database connection.")
         return
     
-    # Pre-calculate distances for all restaurants before filtering
-    user_location = st.session_state.user_location
-    for restaurant in restaurants:
-        has_user_location = user_location and user_location['latitude'] is not None and user_location['longitude'] is not None
-        has_restaurant_coords = 'latitude' in restaurant and 'longitude' in restaurant
-        
-        if has_user_location and has_restaurant_coords:
-            # Calculate distance using the Haversine formula
-            distance_km = calculate_distance(
-                user_location['latitude'], 
-                user_location['longitude'],
-                restaurant['latitude'], 
-                restaurant['longitude']
-            )
-            
-            # Convert to miles
-            distance_mi = distance_km * 0.621371
-            
-            # Store the formatted distance for filtering
-            if distance_mi < 0.1:
-                restaurant['distance'] = "0.1 mi"
-            else:
-                restaurant['distance'] = f"{distance_mi:.1f} mi"
+    # Process restaurant locations and calculate distances
+    restaurants = process_restaurant_locations(restaurants)
     
     # Display filters and get filtered restaurants
     filtered_restaurants, min_rating, min_reviews, sort_by, sort_order, name_filter, deals_filter, max_price = display_filters(restaurants)

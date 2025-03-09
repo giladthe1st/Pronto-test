@@ -34,8 +34,12 @@ def _has_legacy_deals(restaurant):
 
 def _display_detailed_deals(restaurant, text_filter=""):
     """Display deals using the detailed deals structure."""
-    summarized_deals = restaurant['summarized_deals']
-    detailed_deals = restaurant['detailed_deals']
+    summarized_deals = restaurant.get('summarized_deals', '')
+    detailed_deals = restaurant.get('detailed_deals', '')
+    
+    if not summarized_deals or not detailed_deals:
+        _show_no_deals_message()
+        return
     
     # Split the deals
     summarized_list = [deal.strip() for deal in summarized_deals.split('->') if deal.strip()]
@@ -101,7 +105,11 @@ def _render_detailed_deals(restaurant, filtered_deals):
 
 def _display_legacy_deals(restaurant, text_filter=""):
     """Display deals using the legacy deals structure."""
-    deals_text = restaurant['deals']
+    deals_text = restaurant.get('deals', '')
+    
+    if not deals_text:
+        _show_no_deals_message()
+        return
     
     # Split deals by the separator
     if '->' in deals_text:

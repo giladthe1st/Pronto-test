@@ -52,14 +52,21 @@ def display_single_restaurant(restaurant, user_location=None, text_filter=""):
         
         # Column 1: Logo
         with col1:
-            display_restaurant_logo(restaurant['name'], restaurant.get('logo_url'))
+            display_restaurant_logo(restaurant['name'], restaurant.get('logo_url', ''))
         
         # Column 2: Name
         with col2:
             # Add the same fixed vertical space before name
             st.markdown('<div class="vertical-spacer"></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="restaurant-name"><a href="{restaurant["website"]}" target="_blank">{restaurant["name"]}</a></div>', unsafe_allow_html=True)
             
+            # Check if website is available
+            website = restaurant.get('website', '#')
+            if website and website != '#':
+                # Display name with link to website
+                st.markdown(f'<div class="restaurant-name"><a href="{website}" target="_blank">{restaurant["name"]}</a></div>', unsafe_allow_html=True)
+            else:
+                # Display name without link
+                st.markdown(f'<div class="restaurant-name">{restaurant["name"]}</div>', unsafe_allow_html=True)
         
         # Column 3: Deals
         with col3:
