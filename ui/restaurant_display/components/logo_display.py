@@ -15,8 +15,7 @@ def display_restaurant_logo(restaurant_name, logo_url=None):
     Returns:
         None
     """
-    # Add fixed vertical space before logo
-    st.markdown('<div class="vertical-spacer"></div>', unsafe_allow_html=True)
+    # Remove the vertical spacer to align with restaurant name
     
     try:
         # Get the restaurant logo using our improved image handler
